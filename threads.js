@@ -3524,7 +3524,7 @@ Process.prototype.doSetVideoTransparency = function(factor) {
 };
 
 Process.prototype.reportMotionOnStage = function(motionType) {
-    return this.reportGetMotionOn(motionType, 'stage');
+    return this.reportMotionOn(motionType, 'stage');
 };
 
 Process.prototype.reportMotionOn = function(motionType, on) {
