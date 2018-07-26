@@ -6407,8 +6407,7 @@ StageMorph.prototype.init = function (globals) {
 
     this.videoElement = null;
     this.videoTransparency = 50;
-    this.videoMotion = new VideoMotion(this.dimensions.x, this.dimensions.y);
-
+    this.videoMotion = null;
     StageMorph.uber.init.call(this);
 
     this.acceptsDrops = false;
@@ -6553,13 +6552,18 @@ StageMorph.prototype.drawOn = function (aCanvas, aRect) {
 
 // Video
 StageMorph.prototype.drawVideo = function(context) {
-    var w = this.dimensions.x * this.scale,
-        h = this.dimensions.y * this.scale;
+    var w = this.dimensions.x,
+        h = this.dimensions.y;
     context.save();
     context.globalAlpha = 1 - (this.videoTransparency / 100);
     if (!this.videoElement.isFlipped) {
         context.translate(w, 0);
         context.scale(-1, 1);
+    }
+    if (this.videoElement.width != w || this.videoElement.height != h) {
+        this.videoElement.width = w;
+        this.videoElement.height = h;
+        this.videoMotion.reset(w, h);
     }
     context.drawImage(
         this.videoElement,
@@ -6589,13 +6593,15 @@ StageMorph.prototype.startVideo = function(isFlipped) {
     }
     if (!this.videoElement) {
         this.videoElement = document.createElement('video');
-        this.videoElement.hidden = true;
         this.videoElement.width = this.dimensions.x;
         this.videoElement.height = this.dimensions.y;
-
+        this.videoElement.hidden = true;        
         document.body.appendChild(this.videoElement);
     }
     this.videoElement.isFlipped = isFlipped;
+    if (!this.videoMotion) {
+        this.videoMotion = new VideoMotion(this.dimensions.x, this.dimensions.y);
+    }
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(function(stream) {
@@ -6611,6 +6617,7 @@ StageMorph.prototype.stopVideo = function() {
     if (this.videoElement) {
         this.videoElement.remove();
         this.videoElement = null;
+        this.videoMotion = null;
     }
     this.changed();
     this.drawNew();

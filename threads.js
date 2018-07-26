@@ -4739,6 +4739,17 @@ function VideoMotion(width, height) {
     this.toDegree = 180 / Math.PI;
 };
 
+/*
+ * Reset videoElement and videoMotion dimensions. This function is called when stage dimensions change.
+ */
+VideoMotion.prototype.reset = function(width, height){
+    this.width = width;
+    this.height = height;
+    this.imageBuffer = new ArrayBuffer(this.width * this.height * 2);
+    this.curr = new Uint8ClampedArray(this.imageBuffer, 0, this.width * this.height);
+    this.prev = new Uint8ClampedArray(this.imageBuffer, this.width * this.height, this.width * this.height);
+}
+
 VideoMotion.prototype.addFrame = function(imageData) {
     var i,
         temp = this.prev,
