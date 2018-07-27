@@ -4995,11 +4995,13 @@ VideoMotion.prototype.getLocalMotion = function(aSprite) {
             canvasContext,
             imageData;
         canvasContext = canvas.getContext('2d');
-        canvasContext.drawImage(sprite.image,
+        canvasContext.drawImage(
+            sprite.image,
             0, 0, Math.floor(sprite.extent().x), Math.floor(sprite.extent().y),
-            0, 0, newExtent.x, newExtent.y);
+            0, 0, newExtent.x, newExtent.y
+        );
         imageData = canvas.getContext('2d').getImageData(0, 0, newExtent.x, newExtent.y).data;		
-        return new Uint32Array(imageData.buffer.slice(0)); ;
+        return new Uint32Array(imageData.buffer.slice(0));
     }
 
     /*
