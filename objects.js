@@ -6579,18 +6579,24 @@ StageMorph.prototype.startVideo = function(isFlipped) {
     var myself = this;
 
     function noCameraSupport() {
-        throw new Error(
-            'Please make sure your web browser is up to date\n' +
+        var dialog = new DialogBoxMorph();
+        dialog.inform(
+            localize('Camera not supported'),
+            localize('Please make sure your web browser is up to date\n' +
             'and your camera is properly configured. \n\n' +
             'Some browsers also require you to access Snap!\n' +
             'through HTTPS to use the camera.\n\n' +
             'Plase replace the "http://" part of the address\n' +
-            'in your browser by "https://" and try again.'
+            'in your browser by "https://" and try again.'),
+            this.world
         );
+        dialog.fixLayout();
+        dialog.drawNew();
         if (myself.videoElement) {
             myself.videoElement.remove();
         }
     }
+
     if (!this.videoElement) {
         this.videoElement = document.createElement('video');
         this.videoElement.width = this.dimensions.x;
