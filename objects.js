@@ -6552,18 +6552,18 @@ StageMorph.prototype.drawOn = function (aCanvas, aRect) {
 
 // Video
 StageMorph.prototype.drawVideo = function(context) {
-    var w = this.dimensions.x,
-        h = this.dimensions.y;
+    var w = this.dimensions.x * this.scale,
+        h = this.dimensions.y * this.scale;
     context.save();
     context.globalAlpha = 1 - (this.videoTransparency / 100);
     if (!this.videoElement.isFlipped) {
         context.translate(w, 0);
         context.scale(-1, 1);
     }
-    if (this.videoElement.width != w || this.videoElement.height != h) {
-        this.videoElement.width = w;
-        this.videoElement.height = h;
-        this.videoMotion.reset(w, h);
+    if (this.videoElement.width != this.dimensions.x || this.videoElement.height != this.dimensions.y) {
+        this.videoElement.width = this.dimensions.x;
+        this.videoElement.height = this.dimensions.y;
+        this.videoMotion.reset(this.dimensions.x, this.dimensions.y);
     }
     context.drawImage(
         this.videoElement,
