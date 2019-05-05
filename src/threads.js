@@ -43,7 +43,7 @@
         Variable
         VariableFrame
         JSCompiler
-        VideoMotion;
+        VideoMotion
 
     credits
     -------
@@ -60,9 +60,9 @@ degrees, detect, nop, radians, ReporterSlotMorph, CSlotMorph, RingMorph, Sound,
 IDE_Morph, ArgLabelMorph, localize, XML_Element, hex_sha512, TableDialogMorph,
 StageMorph, SpriteMorph, StagePrompterMorph, Note, modules, isString, copy,
 isNil, WatcherMorph, List, ListWatcherMorph, alert, console, TableMorph, Color,
-TableFrameMorph, ColorSlotMorph, isSnapObject, Map*/
+TableFrameMorph, ColorSlotMorph, isSnapObject, Map, newCanvas, Symbol*/
 
-modules.threads = '2019-January-28';
+modules.threads = '2019-May-02';
 
 var ThreadManager;
 var Process;
@@ -717,6 +717,7 @@ Process.prototype.evaluateBlock = function (block, argCount) {
     // check for special forms
     if (selector === 'reportOr' ||
             selector ===  'reportAnd' ||
+            selector === 'reportIfElse' ||
             selector === 'doReport') {
         return this[selector](block);
     }
@@ -1019,7 +1020,7 @@ Process.prototype.reify = function (topBlock, parameterNames, isCustomBlock) {
             context.expression.allEmptySlots().forEach(function (slot) {
                 i += 1;
                 if (slot instanceof MultiArgMorph) {
-                    slot.bindingID = ['arguments'];
+                    slot.bindingID = Symbol.for('arguments');
                 } else {
                     slot.bindingID = i;
                 }
@@ -1076,11 +1077,9 @@ Process.prototype.evaluate = function (
 ) {
     if (!context) {return null; }
     if (context instanceof Function) {
-        /*
-        if (!this.enableJS) {
-            throw new Error('JavaScript is not enabled');
-        }
-        */
+        // if (!this.enableJS) {
+        //     throw new Error('JavaScript is not enabled');
+        // }
         return context.apply(
             this.blockReceiver(),
             args.asArray().concat([this])
@@ -1121,8 +1120,8 @@ Process.prototype.evaluate = function (
     // assign arguments to parameters
 
     // assign the actual arguments list to the special
-    // parameter ID ['arguments'], to be used for variadic inputs
-    outer.variables.addVar(['arguments'], args);
+    // parameter ID Symbol.for('arguments'), to be used for variadic inputs
+    outer.variables.addVar(Symbol.for('arguments'), args);
 
     // assign arguments that are actually passed
     if (parms.length > 0) {
@@ -1221,8 +1220,8 @@ Process.prototype.initializeFor = function (context, args) {
     // assign arguments to parameters
 
     // assign the actual arguments list to the special
-    // parameter ID ['arguments'], to be used for variadic inputs
-    outer.variables.addVar(['arguments'], args);
+    // parameter ID Symbol.for('arguments'), to be used for variadic inputs
+    outer.variables.addVar(Symbol.for('arguments'), args);
 
     // assign arguments that are actually passed
     if (parms.length > 0) {
@@ -1793,10 +1792,47 @@ Process.prototype.reportListContainsItem = function (list, element) {
     return list.contains(element);
 };
 
+Process.prototype.reportListIsEmpty = function (list) {
+    this.assertType(list, 'list');
+    return list.isEmpty();
+};
+
 Process.prototype.doShowTable = function (list) {
     // experimental
     this.assertType(list, 'list');
     new TableDialogMorph(list).popUp(this.blockReceiver().world());
+};
+
+// Process interpolated non-HOF list primitives
+
+Process.prototype.reportNumbers = function (start, end) {
+    // answer a new linked list containing an linearly ascending progression
+    // of integers beginning at start to end.
+    // this is interpolated so it can handle big ranges of numbers
+    // without blocking the UI
+
+    var dta;
+    this.assertType(+start, 'number');
+    this.assertType(+end, 'number');
+    if (this.context.accumulator === null) {
+        this.context.accumulator = {
+            target : new List(),
+            end : null,
+            idx : +start
+        };
+        this.context.accumulator.target.isLinked = true;
+        this.context.accumulator.end = this.context.accumulator.target;
+    }
+    dta = this.context.accumulator;
+    if (dta.idx > +end) {
+        dta.end.rest = new List();
+        this.returnValueToParentContext(dta.target.cdr());
+        return;
+    }
+    dta.end.rest = dta.target.cons(dta.idx);
+    dta.end = dta.end.rest;
+    dta.idx += 1;
+    this.pushContext();
 };
 
 // Process conditionals primitives
@@ -1840,6 +1876,23 @@ Process.prototype.doIfElse = function () {
     this.pushContext();
 };
 
+Process.prototype.reportIfElse = function (block) {
+    var inputs = this.context.inputs;
+
+    if (inputs.length < 1) {
+        this.evaluateNextInput(block);
+    } else if (inputs.length > 1) {
+        if (this.flashContext()) {return; }
+        this.returnValueToParentContext(inputs.pop());
+        this.popContext();
+    } else if (inputs[0]) {
+        this.evaluateNextInput(block);
+    } else {
+        inputs.push(null);
+        this.evaluateNextInput(block);
+    }
+};
+
 // Process process related primitives
 
 Process.prototype.doStop = function () {
@@ -1851,11 +1904,11 @@ Process.prototype.doStopAll = function () {
     if (this.homeContext.receiver) {
         stage = this.homeContext.receiver.parentThatIsA(StageMorph);
         if (stage) {
+            stage.stopAllActiveSounds();
             stage.threads.resumeAll(stage);
             stage.keysPressed = {};
             stage.runStopScripts();
             stage.threads.stopAll();
-            stage.stopAllActiveSounds();
             stage.children.forEach(function (morph) {
                 if (morph.stopTalking) {
                     morph.stopTalking();
@@ -1864,7 +1917,13 @@ Process.prototype.doStopAll = function () {
             stage.removeAllClones();
         }
         ide = stage.parentThatIsA(IDE_Morph);
-        if (ide) {ide.controlBar.pauseButton.refresh(); }
+        if (ide) {
+            ide.controlBar.pauseButton.refresh();
+            ide.nextSteps([ // catch forever loops
+                nop,
+                function () {stage.stopAllActiveSounds(); }
+            ]);
+        }
     }
 };
 
@@ -2068,63 +2127,16 @@ Process.prototype.doWaitUntil = function (goalCondition) {
     this.pushContext();
 };
 
-Process.prototype.reportMap = function (reporter, list) {
-    // answer a new list containing the results of the reporter applied
-    // to each value of the given list. Distinguish between linked and
-    // arrayed lists.
-    // Note: This method utilizes the current context's inputs array to
-    // manage temporary variables, whose allocation to which slot are
-    // documented in each of the variants' code (linked or arrayed) below
+// Process interpolated iteration primitives
 
-    var next;
-    if (list.isLinked) {
-        // this.context.inputs:
-        // [0] - reporter
-        // [1] - list (original source)
-        // -----------------------------
-        // [2] - result list (target)
-        // [3] - currently last element of result list
-        // [4] - current source list (what's left to map)
-        // [5] - current value of last function call
-
-        if (this.context.inputs.length < 3) {
-            this.context.addInput(new List());
-            this.context.inputs[2].isLinked = true;
-            this.context.addInput(this.context.inputs[2]);
-            this.context.addInput(list);
-        }
-        if (this.context.inputs[4].length() === 0) {
-            this.context.inputs[3].rest = list.cons(this.context.inputs[5]);
-            this.returnValueToParentContext(this.context.inputs[2].cdr());
-            return;
-        }
-        if (this.context.inputs.length > 5) {
-            this.context.inputs[3].rest = list.cons(this.context.inputs[5]);
-            this.context.inputs[3] = this.context.inputs[3].rest;
-            this.context.inputs.splice(5);
-        }
-        next = this.context.inputs[4].at(1);
-        this.context.inputs[4] = this.context.inputs[4].cdr();
-        this.pushContext();
-        this.evaluate(reporter, new List([next]));
-    } else { // arrayed
-        // this.context.inputs:
-        // [0] - reporter
-        // [1] - list (original source)
-        // -----------------------------
-        // [2..n] - result values (target)
-
-        if (this.context.inputs.length - 2 === list.length()) {
-            this.returnValueToParentContext(
-                new List(this.context.inputs.slice(2))
-            );
-            return;
-        }
-        next = list.at(this.context.inputs.length - 1);
-        this.pushContext();
-        this.evaluate(reporter, new List([next]));
-    }
-};
+/*
+    these primitives can be - for the most part easily - written as
+    custom blocks by users themselves. They are, or used to be, in
+    libraries that could be loaded additionally. Making them available
+    as primitives has the benefit of getting novices acquainted to
+    using HOFs plus some performance advantages, however at the cost
+    of losing the ability to inspect how they're written.
+*/
 
 Process.prototype.doForEach = function (upvar, list, script) {
     // perform a script for each element of a list, assigning the
@@ -2133,18 +2145,226 @@ Process.prototype.doForEach = function (upvar, list, script) {
     // within the script. Uses the context's - unused - fourth
     // element as temporary storage for the current list index
 
+    this.assertType(list, 'list');
     if (isNil(this.context.inputs[3])) {this.context.inputs[3] = 1; }
-    var index = this.context.inputs[3];
+    var index = this.context.inputs[3],
+        item = list.at(index);
     this.context.outerContext.variables.addVar(upvar);
-    this.context.outerContext.variables.setVar(
-        upvar,
-        list.at(index)
-    );
+    this.context.outerContext.variables.setVar(upvar, item);
     if (index > list.length()) {return; }
     this.context.inputs[3] += 1;
     this.pushContext('doYield');
     this.pushContext();
-    this.evaluate(script, new List(), true);
+    this.evaluate(script, new List([item]), true);
+};
+
+Process.prototype.doFor = function (upvar, start, end, script) {
+    // perform a script for every integer step between start and stop,
+    // assigning the current iteration index to a variable with the
+    // name specified in the "upvar" parameter, so it can be referenced
+    // within the script.
+
+    var dta;
+    if (this.context.accumulator === null) {
+        this.context.accumulator = {
+            idx : Math.floor(start),
+            test : start < end ?
+                function () {return this.idx > end; }
+                    : function () {return this.idx < end; },
+            step : start < end ? 1 : -1,
+            parms : new List() // empty parameters, reusable to avoid GC
+        };
+    }
+    dta = this.context.accumulator;
+    this.context.outerContext.variables.addVar(upvar);
+    this.context.outerContext.variables.setVar(upvar, dta.idx);
+    if (dta.test()) {return; }
+    dta.idx += dta.step;
+    this.pushContext('doYield');
+    this.pushContext();
+    this.evaluate(script, dta.parms, true);
+};
+
+// Process interpolated HOF primitives
+
+/*
+    this.context.inputs:
+    [0] - reporter
+    [1] - list (original source)
+    -----------------------------
+    [2] - last reporter evaluation result
+
+    these primitives used to store the accumulated data in the unused parts
+    of the context's input-array. For reasons obscure to me this led to
+    JS stack overflows when used on large lists (> 150 k items). As a remedy
+    aggregations are now accumulated in the "accumulator" property slot
+    of Context. Why this speeds up execution by orders of magnitude while
+    "fixing" the stack-overflow issue eludes me. -Jens
+*/
+
+Process.prototype.reportMap = function (reporter, list) {
+    // answer a new list containing the results of the reporter applied
+    // to each value of the given list. Distinguish between linked and
+    // arrayed lists.
+
+    var next;
+    this.assertType(list, 'list');
+    if (list.isLinked) {
+        if (this.context.accumulator === null) {
+            this.context.accumulator = {
+                source : list,
+                target : new List(),
+                end : null,
+                remaining : list.length()
+            };
+            this.context.accumulator.target.isLinked = true;
+            this.context.accumulator.end = this.context.accumulator.target;
+        } else if (this.context.inputs.length > 2) {
+            this.context.accumulator.end.rest = list.cons(
+                this.context.inputs.pop()
+            );
+            this.context.accumulator.end = this.context.accumulator.end.rest;
+            this.context.accumulator.remaining -= 1;
+        }
+        if (this.context.accumulator.remaining === 0) {
+            this.context.accumulator.end.rest = list.cons(
+                this.context.inputs[2]
+            ).cdr();
+            this.returnValueToParentContext(
+                this.context.accumulator.target.cdr()
+            );
+            return;
+        }
+        next = this.context.accumulator.source.at(1);
+        this.context.accumulator.source = this.context.accumulator.source.cdr();
+    } else { // arrayed
+        if (this.context.accumulator === null) {
+            this.context.accumulator = [];
+        } else if (this.context.inputs.length > 2) {
+            this.context.accumulator.push(this.context.inputs.pop());
+        }
+        if (this.context.accumulator.length === list.length()) {
+            this.returnValueToParentContext(
+                new List(this.context.accumulator)
+            );
+            return;
+        }
+        next = list.at(this.context.accumulator.length + 1);
+    }
+    this.pushContext();
+    this.evaluate(reporter, new List([next]));
+};
+
+Process.prototype.reportKeep = function (predicate, list) {
+    // Filter - answer a new list containing the items of the list for which
+    // the predicate evaluates TRUE.
+    // Distinguish between linked and arrayed lists.
+
+    var next;
+    this.assertType(list, 'list');
+    if (list.isLinked) {
+        if (this.context.accumulator === null) {
+            this.context.accumulator = {
+                source : list,
+                target : new List(),
+                end : null,
+                remaining : list.length()
+            };
+            this.context.accumulator.target.isLinked = true;
+            this.context.accumulator.end = this.context.accumulator.target;
+        } else if (this.context.inputs.length > 2) {
+            if (this.context.inputs.pop() === true) {
+                this.context.accumulator.end.rest = list.cons(
+                    this.context.accumulator.source.at(1)
+                );
+                this.context.accumulator.end =
+                    this.context.accumulator.end.rest;
+            }
+            this.context.accumulator.remaining -= 1;
+            this.context.accumulator.source =
+                this.context.accumulator.source.cdr();
+        }
+        if (this.context.accumulator.remaining === 0) {
+            this.context.accumulator.end.rest = new List();
+            this.returnValueToParentContext(
+                this.context.accumulator.target.cdr()
+            );
+            return;
+        }
+        next = this.context.accumulator.source.at(1);
+    } else { // arrayed
+        if (this.context.accumulator === null) {
+            this.context.accumulator = {
+                idx : 0,
+                target : []
+            };
+        } else if (this.context.inputs.length > 2) {
+            if (this.context.inputs.pop() === true) {
+                this.context.accumulator.target.push(
+                    list.at(this.context.accumulator.idx)
+                );
+            }
+        }
+        if (this.context.accumulator.idx === list.length()) {
+            this.returnValueToParentContext(
+                new List(this.context.accumulator.target)
+            );
+            return;
+        }
+        this.context.accumulator.idx += 1;
+        next = list.at(this.context.accumulator.idx);
+    }
+    this.pushContext();
+    this.evaluate(predicate, new List([next]));
+};
+
+Process.prototype.reportCombine = function (reporter, list) {
+    // Fold - answer an aggregation of all list items from "left to right"
+    // Distinguish between linked and arrayed lists.
+
+    var next, current;
+    this.assertType(list, 'list');
+    if (list.length() < 2) {
+        this.returnValueToParentContext(list.length() ? list.at(1) : 0);
+        return;
+    }
+    if (list.isLinked) {
+        if (this.context.accumulator === null) {
+            this.context.accumulator = {
+                source : list.cdr(),
+                target : list.at(1),
+                remaining : list.length() - 1
+            };
+        } else if (this.context.inputs.length > 2) {
+            this.context.accumulator.target = this.context.inputs.pop();
+            this.context.accumulator.remaining -= 1;
+            this.context.accumulator.source =
+                this.context.accumulator.source.cdr();
+        }
+        if (this.context.accumulator.remaining === 0) {
+            this.returnValueToParentContext(this.context.accumulator.target);
+            return;
+        }
+        next = this.context.accumulator.source.at(1);
+    } else { // arrayed
+        if (this.context.accumulator === null) {
+            this.context.accumulator = {
+                idx : 1,
+                target : list.at(1)
+            };
+        } else if (this.context.inputs.length > 2) {
+            this.context.accumulator.target = this.context.inputs.pop();
+        }
+        if (this.context.accumulator.idx === list.length()) {
+            this.returnValueToParentContext(this.context.accumulator.target);
+            return;
+        }
+        this.context.accumulator.idx += 1;
+        next = list.at(this.context.accumulator.idx);
+    }
+    current = this.context.accumulator.target;
+    this.pushContext();
+    this.evaluate(reporter, new List([current, next]));
 };
 
 // Process interpolated primitives
@@ -2222,12 +2442,18 @@ Process.prototype.blockReceiver = function () {
 
 // Process sound primitives (interpolated)
 
-Process.prototype.doPlaySoundUntilDone = function (name) {
-    var sprite = this.blockReceiver();
-    if (this.context.activeAudio === null) {
-        this.context.activeAudio = sprite.playSound(name);
+Process.prototype.playSound = function (name) {
+    if (name instanceof List) {
+        return this.doPlaySoundAtRate(name, 44100);
     }
-    if (this.context.activeAudio.ended
+    return this.blockReceiver().doPlaySound(name);
+};
+
+Process.prototype.doPlaySoundUntilDone = function (name) {
+    if (this.context.activeAudio === null) {
+        this.context.activeAudio = this.playSound(name);
+    }
+    if (name === null || this.context.activeAudio.ended
             || this.context.activeAudio.terminated) {
         return null;
     }
@@ -2248,6 +2474,232 @@ Process.prototype.doStopAllSounds = function () {
         });
         stage.stopAllActiveSounds();
     }
+};
+
+Process.prototype.doPlaySoundAtRate = function (name, rate) {
+    var sound, samples, ctx, gain, pan, source, rcvr;
+
+    if (!(name instanceof List)) {
+        sound = name instanceof Sound ? name
+            : (typeof name === 'number' ? this.blockReceiver().sounds.at(name)
+                : detect(
+                    this.blockReceiver().sounds.asArray(),
+                    function (s) {return s.name === name.toString(); }
+            )
+        );
+        if (!sound.audioBuffer) {
+            this.decodeSound(sound);
+            return;
+        }
+        samples = this.reportGetSoundAttribute('samples', sound);
+    } else {
+        samples = name;
+    }
+
+    rcvr = this.blockReceiver();
+    ctx = rcvr.audioContext();
+    gain = rcvr.getGainNode();
+    pan = rcvr.getPannerNode();
+    source = this.encodeSound(samples, rate);
+    rcvr.setVolume(rcvr.volume);
+    source.connect(gain);
+    if (pan) {
+        gain.connect(pan);
+        pan.connect(ctx.destination);
+        rcvr.setPan(rcvr.pan);
+    } else {
+        gain.connect(ctx.destination);
+    }
+    source.pause = source.stop;
+    source.ended = false;
+    source.onended = function () {this.ended = true; };
+    source.start();
+    rcvr.parentThatIsA(StageMorph).activeSounds.push(source);
+    return source;
+};
+
+Process.prototype.reportGetSoundAttribute = function (choice, soundName) {
+    var sound = soundName instanceof Sound ? soundName
+            : (typeof soundName === 'number' ?
+                    this.blockReceiver().sounds.at(soundName)
+                : (soundName instanceof List ? this.encodeSound(soundName)
+                    : detect(
+                        this.blockReceiver().sounds.asArray(),
+                        function (s) {return s.name === soundName.toString(); }
+                    )
+                )
+            ),
+        option = this.inputOption(choice);
+
+    if (option === 'name') {
+        return sound.name;
+    }
+
+    if (!sound.audioBuffer) {
+        this.decodeSound(sound);
+        return;
+    }
+
+    switch (option) {
+    case 'samples':
+        if (!sound.cachedSamples) {
+            sound.cachedSamples = function (sound) {
+                var buf = sound.audioBuffer,
+                    result, i;
+                if (buf.numberOfChannels > 1) {
+                    result = new List();
+                    for (i = 0; i < buf.numberOfChannels; i += 1) {
+                        result.add(new List(buf.getChannelData(i)));
+                    }
+                    return result;
+                }
+                return new List(buf.getChannelData(0));
+            } (sound);
+        }
+        return sound.cachedSamples;
+    case 'sample rate':
+        return sound.audioBuffer.sampleRate;
+    case 'duration':
+        return sound.audioBuffer.duration;
+    case 'length':
+        return sound.audioBuffer.length;
+    case 'number of channels':
+        return sound.audioBuffer.numberOfChannels;
+    default:
+        return 0;
+    }
+};
+
+Process.prototype.decodeSound = function (sound, callback) {
+    // private - callback is optional and invoked with sound as argument
+    var base64, binaryString, len, bytes, i, arrayBuffer, audioCtx,
+        myself = this;
+    if (sound.audioBuffer) {
+        return (callback || nop)(sound);
+    }
+    if (!sound.isDecoding) {
+        base64 = sound.audio.src.split(',')[1];
+        binaryString = window.atob(base64);
+        len = binaryString.length;
+        bytes = new Uint8Array(len);
+        for (i = 0; i < len; i += 1)        {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        arrayBuffer = bytes.buffer;
+        audioCtx = Note.prototype.getAudioContext();
+        sound.isDecoding = true;
+        audioCtx.decodeAudioData(
+            arrayBuffer,
+            function(buffer) {
+                sound.audioBuffer = buffer;
+                sound.isDecoding = false;
+            },
+            function (err) {
+                sound.isDecoding = false;
+                myself.handleError(err);
+            }
+        );
+    }
+    this.pushContext('doYield');
+    this.pushContext();
+};
+
+Process.prototype.encodeSound = function (samples, rate) {
+    // private
+    var rcvr = this.blockReceiver(),
+        ctx = rcvr.audioContext(),
+        channels = (samples.at(1) instanceof List) ? samples.length() : 1,
+        frameCount = (channels === 1) ?
+            samples.length()
+            : samples.at(1).length(),
+        arrayBuffer = ctx.createBuffer(channels, frameCount, +rate || 44100),
+        i,
+        source;
+
+    if (!arrayBuffer.copyToChannel) {
+        arrayBuffer.copyToChannel = function (src, channel) {
+            var buffer = this.getChannelData(channel);
+            for (i = 0; i < src.length; i += 1) {
+                buffer[i] = src[i];
+            }
+        };
+    }
+    if (channels === 1) {
+        arrayBuffer.copyToChannel(
+            Float32Array.from(samples.asArray()),
+            0,
+            0
+        );
+    } else {
+        for (i = 0; i < channels; i += 1) {
+            arrayBuffer.copyToChannel(
+                Float32Array.from(samples.at(i + 1).asArray()),
+                i,
+                0
+            );
+        }
+    }
+    source = ctx.createBufferSource();
+    source.buffer = arrayBuffer;
+    source.audioBuffer = source.buffer;
+    return source;
+};
+
+// Process audio input (interpolated)
+
+Process.prototype.reportAudio = function (choice) {
+    var stage = this.blockReceiver().parentThatIsA(StageMorph),
+        selection = this.inputOption(choice);
+    if (selection === 'resolution') {
+        return stage.microphone.binSize();
+    }
+    if (selection === 'modifier') {
+        return stage.microphone.modifier;
+    }
+    if (stage.microphone.isOn()) {
+        switch (selection) {
+        case 'volume':
+            return stage.microphone.volume * 100;
+        case 'frequency':
+            return stage.microphone.pitch;
+        case 'note':
+            return stage.microphone.note;
+        case 'samples':
+            return new List(stage.microphone.signals);
+        case 'sample rate':
+            return stage.microphone.audioContext.sampleRate;
+        case 'output':
+            return new List(stage.microphone.output);
+        case 'spectrum':
+            return new List(stage.microphone.frequencies);
+        default:
+            return null;
+        }
+    }
+    this.pushContext('doYield');
+    this.pushContext();
+};
+
+Process.prototype.setMicrophoneModifier = function (modifier) {
+    var stage = this.blockReceiver().parentThatIsA(StageMorph),
+        invalid = [
+            'sprite',
+            'stage',
+            'list',
+            'costume',
+            'sound',
+            'number',
+            'text',
+            'Boolean'
+        ];
+    if (!modifier || contains(invalid, this.reportTypeOf(modifier))) {
+        stage.microphone.modifier = null;
+        stage.microphone.stop();
+        return;
+    }
+    stage.microphone.modifier = modifier;
+    stage.microphone.compiledModifier = this.reportCompiled(modifier, 1);
+    stage.microphone.compilerProcess = this;
 };
 
 // Process user prompting primitives (interpolated)
@@ -2465,7 +2917,7 @@ Process.prototype.reportTypeOf = function (thing) {
     if (thing instanceof List) {
         return 'list';
     }
-    if (!isNaN(+thing)) {
+    if (parseFloat(thing) === +thing) { // I hate this! -Jens
         return 'number';
     }
     if (isString(thing)) {
@@ -2535,6 +2987,10 @@ Process.prototype.reportProduct = function (a, b) {
 
 Process.prototype.reportQuotient = function (a, b) {
     return +a / +b;
+};
+
+Process.prototype.reportPower = function (a, b) {
+    return Math.pow(+a, +b);
 };
 
 Process.prototype.reportModulus = function (a, b) {
@@ -2631,6 +3087,7 @@ Process.prototype.reportMonadic = function (fname, n) {
     case 'abs':
         result = Math.abs(x);
         break;
+    // case '\u2212': // minus-sign
     case 'neg':
         result = n * -1;
         break;
@@ -2665,13 +3122,19 @@ Process.prototype.reportMonadic = function (fname, n) {
         result = Math.log(x);
         break;
     case 'log': // base 10
-        result =  Math.log(x) / Math.LN10;
+        result =  Math.log10(x);
+        break;
+    case 'lg': // base 2
+        result =  Math.log2(x);
         break;
     case 'e^':
         result = Math.exp(x);
         break;
     case '10^':
         result = Math.pow(10, x);
+        break;
+    case '2^':
+        result = Math.pow(2, x);
         break;
     default:
         nop();
@@ -2754,9 +3217,9 @@ Process.prototype.reportUnicode = function (string) {
     var str = isNil(string) ? '\u0000' : string.toString();
 
     if (str.codePointAt) { // support for Unicode in newer browsers.
-        return str.codePointAt(0);
+        return str.codePointAt(0) || 0;
     }
-    return str.charCodeAt(0);
+    return str.charCodeAt(0) || 0;
 };
 
 Process.prototype.reportUnicodeAsLetter = function (num) {
@@ -3362,7 +3825,36 @@ Process.prototype.reportAspect = function (aspect, location) {
 
 Process.prototype.colorAtSprite = function (sprite) {
     // private - helper function for aspect of location
+    // answer the top-most color at the sprite's rotation center
+    // excluding the sprite itself
+    var point = sprite instanceof SpriteMorph ? sprite.rotationCenter()
+            : sprite.center(),
+        stage = sprite.parentThatIsA(StageMorph),
+        child,
+        i;
+
+    if (!stage) {return new Color(); }
+    for (i = stage.children.length; i > 0; i -= 1) {
+        child = stage.children[i - 1];
+        if ((child !== sprite) &&
+            child.isVisible &&
+            child.bounds.containsPoint(point) &&
+            !child.isTransparentAt(point)
+        ) {
+            return child.getPixelColor(point);
+        }
+    }
+    if (stage.bounds.containsPoint(point)) {
+        return stage.getPixelColor(point);
+    }
+    return new Color();
+};
+
+Process.prototype.colorBelowSprite = function (sprite) {
+    // private - helper function for aspect of location
     // answer the color underneath the layer of the sprite's rotation center
+    // NOTE: layer-aware color sensing is currently unused
+    // in favor of top-layer detection because of user-observations
     var point = sprite instanceof SpriteMorph ? sprite.rotationCenter()
             : sprite.center(),
         stage = sprite.parentThatIsA(StageMorph),
@@ -3521,6 +4013,22 @@ Process.prototype.reportAttributeOf = function (attribute, name) {
                                 : localize('Empty');
             case 'size':
                 return thatObj.getScale ? thatObj.getScale() : '';
+            case 'volume':
+                return thatObj.getVolume();
+            case 'balance':
+                return thatObj.getPan();
+            case 'width':
+                if (thatObj instanceof StageMorph) {
+                    return thatObj.dimensions.x;
+                }
+                this.assertType(thatObj, 'sprite');
+                return thatObj.width() / stage.scale;
+            case 'height':
+                if (thatObj instanceof StageMorph) {
+                    return thatObj.dimensions.y;
+                }
+                this.assertType(thatObj, 'sprite');
+                return thatObj.height() / stage.scale;
             }
         }
     }
@@ -3528,7 +4036,7 @@ Process.prototype.reportAttributeOf = function (attribute, name) {
 };
 
 Process.prototype.reportGet = function (query) {
-    // experimental, answer a reference to a first-class member
+    // answer a reference to a first-class member
     // or a list of first-class members
     var thisObj = this.blockReceiver(),
         neighborhood,
@@ -3601,10 +4109,24 @@ Process.prototype.reportGet = function (query) {
             return thisObj.name;
         case 'stage':
             return thisObj.parentThatIsA(StageMorph);
+        case 'costume':
+            return thisObj.costume;
         case 'costumes':
             return thisObj.reportCostumes();
         case 'sounds':
             return thisObj.sounds;
+        case 'width':
+            if (thisObj instanceof StageMorph) {
+                return thisObj.dimensions.x;
+            }
+            stage = thisObj.parentThatIsA(StageMorph);
+            return stage ? thisObj.width() / stage.scale : 0;
+        case 'height':
+            if (thisObj instanceof StageMorph) {
+                return thisObj.dimensions.y;
+            }
+            stage = thisObj.parentThatIsA(StageMorph);
+            return stage ? thisObj.height() / stage.scale : 0;
         }
     }
     return '';
@@ -3732,6 +4254,9 @@ Process.prototype.doSet = function (attribute, value) {
         this.assertType(value, 'number');
         rcvr.setRotationY(value);
         break;
+    case 'microphone modifier':
+        this.setMicrophoneModifier(value);
+        break;
     default:
         throw new Error(
             '"' + localize(name) + '" ' + localize('is read-only')
@@ -3836,6 +4361,34 @@ Process.prototype.reportTimer = function () {
     return 0;
 };
 
+// Process Dates and times in Snap
+Process.prototype.reportDate = function (datefn) {
+    var currDate, func, result,
+        inputFn = this.inputOption(datefn),
+        // Map block options to built-in functions
+        dateMap = {
+            'year' : 'getFullYear',
+            'month' : 'getMonth',
+            'date': 'getDate',
+            'day of week' : 'getDay',
+            'hour' : 'getHours',
+            'minute' : 'getMinutes',
+            'second' : 'getSeconds',
+            'time in milliseconds' : 'getTime'
+        };
+
+    if (!dateMap[inputFn]) { return ''; }
+    currDate = new Date();
+    func = dateMap[inputFn];
+    result = currDate[func]();
+
+    // Show months as 1-12 and days as 1-7
+    if (inputFn === 'month' || inputFn === 'day of week') {
+        result += 1;
+    }
+    return result;
+};
+
 // Video
 Process.prototype.doSetVideo = function(state) {
     var stage,
@@ -3895,34 +4448,6 @@ Process.prototype.reportMotionOn = function(motionType, on) {
                 result = sprite.motionAmount;
             }
             break;
-    }
-    return result;
-};
-
-// Process Dates and times in Snap
-Process.prototype.reportDate = function (datefn) {
-    var currDate, func, result,
-        inputFn = this.inputOption(datefn),
-        // Map block options to built-in functions
-        dateMap = {
-            'year' : 'getFullYear',
-            'month' : 'getMonth',
-            'date': 'getDate',
-            'day of week' : 'getDay',
-            'hour' : 'getHours',
-            'minute' : 'getMinutes',
-            'second' : 'getSeconds',
-            'time in milliseconds' : 'getTime'
-        };
-
-    if (!dateMap[inputFn]) { return ''; }
-    currDate = new Date();
-    func = dateMap[inputFn];
-    result = currDate[func]();
-
-    // Show months as 1-12 and days as 1-7
-    if (inputFn === 'month' || inputFn === 'day of week') {
-        result += 1;
     }
     return result;
 };
@@ -4061,9 +4586,42 @@ Process.prototype.doPlayNote = function (pitch, beats) {
 
 Process.prototype.doPlayNoteForSecs = function (pitch, secs) {
     // interpolated
+    var rcvr = this.blockReceiver();
     if (!this.context.startTime) {
+        rcvr.setVolume(rcvr.getVolume()); // b/c Chrome needs lazy init
+        rcvr.setPan(rcvr.getPan()); // b/c Chrome needs lazy initialization
         this.context.startTime = Date.now();
         this.context.activeNote = new Note(pitch);
+        this.context.activeNote.play(
+            this.instrument,
+            rcvr.getGainNode(),
+            rcvr.getPannerNode()
+        );
+    }
+    if ((Date.now() - this.context.startTime) >= (secs * 1000)) {
+        if (this.context.activeNote) {
+            this.context.activeNote.stop();
+            this.context.activeNote = null;
+        }
+        return null;
+    }
+    this.pushContext('doYield');
+    this.pushContext();
+};
+
+Process.prototype.doPlayFrequency = function (hz, secs) {
+    this.doPlayFrequencyForSecs(
+        parseFloat(hz || '0'),
+        parseFloat(secs || '0')
+    );
+};
+
+Process.prototype.doPlayFrequencyForSecs = function (hz, secs) {
+    // interpolated
+    if (!this.context.startTime) {
+        this.context.startTime = Date.now();
+        this.context.activeNote = new Note();
+        this.context.activeNote.frequency = hz;
         this.context.activeNote.play(this.instrument);
     }
     if ((Date.now() - this.context.startTime) >= (secs * 1000)) {
@@ -4080,6 +4638,82 @@ Process.prototype.doPlayNoteForSecs = function (pitch, secs) {
 Process.prototype.doSetInstrument = function (num) {
     this.instrument = +num;
     this.receiver.instrument = +num;
+    if (this.receiver.freqPlayer) {
+        this.receiver.freqPlayer.setInstrument(+num);
+    }
+};
+
+// Process image processing primitives
+
+Process.prototype.reportGetImageAttribute = function (choice, name) {
+    var cst = this.costumeNamed(name) || new Costume(),
+        option = this.inputOption(choice);
+
+    switch (option) {
+    case 'name':
+        return cst.name;
+    case 'width':
+        return cst.width();
+    case 'height':
+        return cst.height();
+    case 'pixels':
+        return cst.rasterized().pixels();
+    default:
+        return cst;
+    }
+};
+
+Process.prototype.reportNewCostumeStretched = function (name, xP, yP) {
+    var cst;
+    if (name instanceof List) {
+        return this.reportNewCostume(name, xP, yP);
+    }
+    cst = this.costumeNamed(name);
+    if (!cst) {
+        return new Costume();
+    }
+    return cst.stretched(
+        Math.round(cst.width() * +xP / 100),
+        Math.round(cst.height() * +yP / 100)
+    );
+};
+
+Process.prototype.costumeNamed = function (name) {
+    // private
+    if (name instanceof Costume) {
+        return name;
+    }
+    if (typeof name === 'number') {
+        return this.blockReceiver().costumes.at(name);
+    }
+    if (this.inputOption(name) === 'current') {
+        return this.blockReceiver().costume;
+    }
+    return detect(
+        this.blockReceiver().costumes.asArray(),
+        function (c) {return c.name === name.toString(); }
+    );
+};
+
+Process.prototype.reportNewCostume = function (pixels, width, height) {
+    // private
+    width = Math.abs(Math.floor(+width));
+    height = Math.abs(Math.floor(+height));
+
+    var canvas = newCanvas(new Point(width, height), true),
+        ctx = canvas.getContext('2d'),
+        src = pixels.asArray(),
+        dta = ctx.createImageData(width, height),
+        i, k, px;
+
+    for (i = 0; i < src.length; i += 1) {
+        px = src[i].asArray();
+        for (k = 0; k < 4; k += 1) {
+            dta.data[(i * 4) + k] = px[k];
+        }
+    }
+    ctx.putImageData(dta, 0, 0);
+    return new Costume(canvas);
 };
 
 // Process constant input options
@@ -4489,6 +5123,7 @@ Process.prototype.reportAtomicGroup = function (list, reporter) {
     tag             string or number to optionally identify the Context,
                     as a "return" target (for the "stop block" primitive)
     isFlashing      flag for single-stepping
+    accumulator     slot for collecting data from reentrant visits
 */
 
 function Context(
@@ -4519,6 +5154,7 @@ function Context(
     this.emptySlots = 0; // used for block reification
     this.tag = null;  // lexical catch-tag for custom blocks
     this.isFlashing = false; // for single-stepping
+    this.accumulator = null;
 }
 
 Context.prototype.toString = function () {
@@ -4983,6 +5619,14 @@ JSCompiler.prototype.compileExpression = function (block) {
         return this.compileInfix('||', inputs);
     case 'reportAnd':
         return this.compileInfix('&&', inputs);
+    case 'reportIfElse':
+        return '(' +
+            this.compileInput(inputs[0]) +
+            ' ? ' +
+            this.compileInput(inputs[1]) +
+            ' : ' +
+            this.compileInput(inputs[2]) +
+            ')';
     case 'evaluateCustomBlock':
         throw new Error(
             'compiling does not yet support\n' +
@@ -5130,10 +5774,10 @@ JSCompiler.prototype.compileInput = function (inp) {
 // VideoMotion /////////////////////////////////////////////////////////////////
 
 /*
- * Calculate, based on two consecutive video frames, the amount of movement and 
+ * Calculate, based on two consecutive video frames, the amount of movement and
  * direction of this movement both on the stage and on the sprite.
  * It's based on Scratch 3 (optical flow algorithm).
-*/
+ */
 function VideoMotion(width, height) {
     this.width = width;
     this.height = height;
@@ -5143,15 +5787,24 @@ function VideoMotion(width, height) {
     this.motionAmount = 0;
     this.motionDirection = 0;
     this.imageBuffer = new ArrayBuffer(this.width * this.height * 2);
-    this.curr = new Uint8ClampedArray(this.imageBuffer, 0, this.width * this.height);
-    this.prev = new Uint8ClampedArray(this.imageBuffer, this.width * this.height, this.width * this.height);
+    this.curr = new Uint8ClampedArray(
+        this.imageBuffer,
+        0,
+        this.width * this.height
+    );
+    this.prev = new Uint8ClampedArray(
+        this.imageBuffer,
+        this.width * this.height,
+        this.width * this.height
+    );
     this.threshold = 30;
     this.amountScale = 100;
     this.toDegree = 180 / Math.PI;
 };
 
 /*
- * Reset videoElement and videoMotion dimensions. This function is called when stage dimensions change.
+ * Reset videoElement and videoMotion dimensions.
+ * This function is called when stage dimensions change.
  */
 VideoMotion.prototype.reset = function(width, height){
     this.width = width;
@@ -5159,9 +5812,17 @@ VideoMotion.prototype.reset = function(width, height){
     this.frameNumber = 0;
     this.lastAnalyzedFrame = 0;
     this.imageBuffer = new ArrayBuffer(this.width * this.height * 2);
-    this.curr = new Uint8ClampedArray(this.imageBuffer, 0, this.width * this.height);
-    this.prev = new Uint8ClampedArray(this.imageBuffer, this.width * this.height, this.width * this.height);
-}
+    this.curr = new Uint8ClampedArray(
+        this.imageBuffer,
+        0,
+        this.width * this.height
+    );
+    this.prev = new Uint8ClampedArray(
+        this.imageBuffer,
+        this.width * this.height,
+        this.width * this.height
+    );
+};
 
 VideoMotion.prototype.addFrame = function(imageData) {
     var i,
@@ -5176,8 +5837,8 @@ VideoMotion.prototype.addFrame = function(imageData) {
 };
 
 VideoMotion.prototype.getStageMotion = function() {
-    var uu = 0, // Accumulate 2d motion vectors from groups of pixels and average it later.
-        vv = 0,
+    var uu = 0, // Accumulate 2d motion vectors from groups
+        vv = 0, // of pixels and average it later.
         n = 0,
         vector = {
             u: 0,
@@ -5187,7 +5848,7 @@ VideoMotion.prototype.getStageMotion = function() {
         winStep = this.winSize * 2 + 1,
         wmax = this.width - this.winSize - 1,
         hmax = this.height - this.winSize - 1,
-        // Optical Flow vars
+    // Optical Flow vars
         A2, A1B2, B1, C1, C2,
         gradX, gradY, gradT;
 
@@ -5215,7 +5876,8 @@ VideoMotion.prototype.getStageMotion = function() {
             address = ((i - this.winSize) * this.width) + j - this.winSize;
             nextAddress = address + winStep;
             maxAddress = ((i + this.winSize) * this.width) + j + this.winSize;
-            for (; address <= maxAddress; address += this.width - winStep, nextAddress += this.width) {
+            for (; address <= maxAddress; address += this.width - winStep,
+                nextAddress += this.width) {
                 for (; address <= nextAddress; address += 1) {
                     // The difference in color between the last frame and
                     // the current frame.
@@ -5225,7 +5887,9 @@ VideoMotion.prototype.getStageMotion = function() {
                     gradX = ((this.curr[address - 1]) - (this.curr[address + 1]));
                     // The difference between the pixel above and the pixel
                     // below.
-                    gradY = ((this.curr[address - this.width]) - (this.curr[address + this.width]));
+                    gradY = ((
+                        this.curr[address - this.width])
+                        - (this.curr[address + this.width]));
                     // Add the combined values of this pixel to previously
                     // considered pixels.
                     A2 += gradX * gradX;
@@ -5240,7 +5904,10 @@ VideoMotion.prototype.getStageMotion = function() {
             vector = this.getMotionVector(A2, A1B2, B1, C2, C1);
             // If u and v are within negative winStep to positive winStep,
             // add them to a sum that will later be averaged.
-            if (-winStep < vector.u && vector.u < winStep && -winStep < vector.v && vector.v < winStep) {
+            if (-winStep < vector.u
+                    && vector.u < winStep
+                    && -winStep < vector.v
+                    && vector.v < winStep) {
                 uu += vector.u;
                 vv += vector.v;
                 n++;
@@ -5253,13 +5920,14 @@ VideoMotion.prototype.getStageMotion = function() {
     // Scale the magnitude of the averaged UV vector.
     this.motionAmount = Math.round(this.amountScale * Math.hypot(uu, vv));
     if (this.motionAmount > this.threshold) {
-        this.motionDirection = (((Math.atan2(vv, uu) * this.toDegree + 270) % 360) - 180).toFixed(2); // Snap direction
+        this.motionDirection = (((Math.atan2(vv, uu) * this.toDegree + 270) % 360) - 180)
+            .toFixed(2); // Snap direction
     }
 };
 
 /**
- * Determine a motion vector combinations of the color component difference on
- * the x axis, y axis, and temporal axis.
+ * Determine a motion vector combinations of the color component difference
+ * on the x axis, y axis, and temporal axis.
  * A2 - a sum of x axis squared
  * A1B2 - a sum of x axis times y axis
  * B1 - a sum of y axis squared
@@ -5301,8 +5969,8 @@ VideoMotion.prototype.getMotionVector = function(A2, A1B2, B1, C2, C1) {
 };
 
 /**
- * Calculate motion amount and direction values based on stored frames (current and
- * previous) that overlaps a given sprite.
+ * Calculate motion amount and direction values based on stored frames
+ * (current and previous) that overlaps a given sprite.
  */
 VideoMotion.prototype.getLocalMotion = function(aSprite) {
     var stage = aSprite.parentThatIsA(StageMorph),
@@ -5333,20 +6001,27 @@ VideoMotion.prototype.getLocalMotion = function(aSprite) {
         // Don't have two frames to analyze yet
         return;
     }
-    // Skip if the current frame has already been considered for this state.
+    // Skip if the current frame has already been considered
+    // for this state.
     if (aSprite.frameNumber !== this.frameNumber) {
-        spriteImage = getSpriteImgageData(aSprite);        
-        // Consider only the area of the current frame overlapped with the given sprite.
+        spriteImage = getSpriteImgageData(aSprite);
+        // Consider only the area of the current frame overlapped
+        // with the given sprite.
         cb = getClippedBounds(aSprite);
-        xmin = Math.max(Math.floor((aSprite.left() - stage.left()) / stage.scale), 0);
-        ymin = Math.max(Math.floor((aSprite.top() - stage.top()) / stage.scale), 0);
+        xmin = Math.max(
+            Math.floor((aSprite.left() - stage.left()) / stage.scale),
+            0);
+        ymin = Math.max(
+            Math.floor((aSprite.top() - stage.top()) / stage.scale),
+            0);
         xmax = Math.min(cb.sw + xmin, stage.dimensions.x);
         ymax = Math.min(cb.sh + ymin, stage.dimensions.y - 1);
-        // This is a performance critical math region.   
+        // This is a performance critical math region.
         pixel = cb.sy * spriteWidth + cb.sx;
-        for (i = ymin; i < ymax; i++, pixel += spriteWidth - cb.sw) { //rows            
+        for (i = ymin; i < ymax; i++, pixel += spriteWidth - cb.sw) { //rows
             for (j = xmin; j < xmax; j++, ++pixel) { //cols
-                if (j > 0 && j < this.width && i > 0 && i < this.height && (spriteImage[pixel] >> 24 & 0xff) == 0xff) {
+                if (j > 0 && j < this.width && i > 0 && i < this.height
+                    && (spriteImage[pixel] >> 24 & 0xff) == 0xff) {
                     address = (i * this.width) + j;
                     // The difference in color between the last frame and
                     // the current frame.
@@ -5356,7 +6031,9 @@ VideoMotion.prototype.getLocalMotion = function(aSprite) {
                     gradX = ((this.curr[address - 1]) - (this.curr[address + 1]));
                     // The difference between the pixel above and the pixel
                     // below.
-                    gradY = ((this.curr[address - this.width]) - (this.curr[address + this.width]));
+                    gradY = (
+                        (this.curr[address - this.width])
+                        - (this.curr[address + this.width]));
                     // Add the combined values of this pixel to previously
                     // considered pixels.
                     A2 += gradX * gradX;
@@ -5372,22 +6049,28 @@ VideoMotion.prototype.getLocalMotion = function(aSprite) {
         // motion direction.
         vector = this.getMotionVector(A2, A1B2, B1, C2, C1);
         if (scaleFactor) {
-            // Store the area of the sprite in pixels            
+            // Store the area of the sprite in pixels
             activePixelNum = scaleFactor;
             scaleFactor /= (2 * winSize * 2 * winSize);
             vector.u = vector.u / scaleFactor;
             vector.v = vector.v / scaleFactor;
         }
         // Scale the magnitude of the averaged UV vector and the number of
-        // overlapping solid pixels.    
-        aSprite.motionAmount = Math.round(localAmountScale * activePixelNum * Math.hypot(vector.u, vector.v));
+        // overlapping solid pixels.
+        aSprite.motionAmount = Math.round(
+            localAmountScale * activePixelNum
+            * Math.hypot(vector.u, vector.v)
+        );
         if (aSprite.motionAmount > localMaxAmount) {
             // Clip all magnitudes greater than 100.
             aSprite.motionAmount = Math.min(localMaxAmount, 100);
         }
         if (aSprite.motionAmount > localThreshold) {
             // Snap direction.
-            aSprite.motionDirection = (((Math.atan2(vector.v, vector.u) * this.toDegree + 270) % 360) - 180).toFixed(2);
+            aSprite.motionDirection = (((
+                Math.atan2(vector.v, vector.u)
+                * this.toDegree + 270) % 360) - 180)
+                .toFixed(2);
         }
         // Skip future calls on this state until a new frame is added.
         aSprite.frameNumber = this.frameNumber;
@@ -5405,13 +6088,15 @@ VideoMotion.prototype.getLocalMotion = function(aSprite) {
             canvas = newCanvas(newExtent, true),
             canvasContext,
             imageData;
-        canvasContext = canvas.getContext('2d');
+        canvasContext = canvas.getContext("2d");
         canvasContext.drawImage(
             sprite.image,
-            0, 0, Math.floor(sprite.extent().x), Math.floor(sprite.extent().y),
+            0, 0, Math.floor(sprite.extent().x),
+            Math.floor(sprite.extent().y),
             0, 0, newExtent.x, newExtent.y
         );
-        imageData = canvas.getContext('2d').getImageData(0, 0, newExtent.x, newExtent.y).data;		
+        imageData = canvas.getContext("2d")
+            .getImageData(0, 0, newExtent.x, newExtent.y).data;
         return new Uint32Array(imageData.buffer.slice(0));
     }
 
@@ -5429,21 +6114,28 @@ VideoMotion.prototype.getLocalMotion = function(aSprite) {
             };
         // Clipping X
         if (sprite.left() < stage.left()) { // sprite outer left stage
-            bounds.sw = Math.max(Math.floor((sprite.right() - stage.left()) / scale), 0);
+            bounds.sw = Math.max(
+                Math.floor((sprite.right() - stage.left()) / scale),
+                0);
             bounds.sx = Math.floor(sprite.width() / scale - bounds.sw);
         }
         if (sprite.right() > stage.right()) { // sprite outer right stage
-            bounds.sw = Math.max(Math.floor((stage.right() - sprite.left()) / scale), 0);
+            bounds.sw = Math.max(
+                Math.floor((stage.right() - sprite.left()) / scale),
+                0);
         }
         //Clipping Y
         if (sprite.top() < stage.top()) { // sprite upper top
-            bounds.sh = Math.max(Math.floor((sprite.bottom() - stage.top()) / scale), 0);
+            bounds.sh = Math.max(
+                Math.floor((sprite.bottom() - stage.top()) / scale),
+                0);
             bounds.sy = Math.floor(sprite.height() / scale - bounds.sh);
         }
         if (sprite.bottom() > stage.bottom()) { // sprite lower bottom
-            bounds.sh = Math.max(Math.floor((stage.bottom() - sprite.top()) / scale), 0);
+            bounds.sh = Math.max(
+                Math.floor((stage.bottom() - sprite.top()) / scale),
+                0);
         }
         return bounds;
     }
 };
-
