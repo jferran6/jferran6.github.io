@@ -185,7 +185,7 @@ SnapTranslator.dict.de = {
     'translator_e-mail':
         'jens@moenig.org, jadga.huegle@sap.com', // optional
     'last_changed':
-        '2019-01-28', // this, too, will appear in the Translators tab
+        '2019-05-02', // this, too, will appear in the Translators tab
 
     // GUI
     // control bar:
@@ -351,12 +351,18 @@ SnapTranslator.dict.de = {
         'Hallo!',
     'Hmm...':
         'Hmm...',
+    '%img of costume %cst':
+        '%img von Kostüm %cst',
+    'stretch %cst x: %n y: %n %':
+        'strecke %cst x: %n y: %n %',
     'change %eff effect by %n':
         '\u00e4ndere %eff -Effekt um %n',
     'set %eff effect to %n':
         'setze %eff -Effekt auf %n',
     'clear graphic effects':
         'schalte Grafikeffekte aus',
+    '%eff effect':
+        '%eff -Effekt',
     'change size by %n':
         '\u00e4ndere Gr\u00f6\u00dfe um %n',
     'set size to %n %':
@@ -383,6 +389,11 @@ SnapTranslator.dict.de = {
     'alert %mult%s':
         'Pop-up: %mult%s',
 
+    'pixels':
+        'Pixel',
+    'current':
+        'aktuell',
+
     // sound:
     'play sound %snd':
         'spiele Klang %snd',
@@ -392,6 +403,16 @@ SnapTranslator.dict.de = {
         'stoppe alle Kl\u00e4nge',
     'rest for %n beats':
         'spiele Pause f\u00fcr %n Schl\u00e4ge',
+    'play sound %snd at %rate Hz':
+        'spiele Klang %snd mit %rate Hz',
+    '%aa of sound %snd':
+        '%aa von Klang %snd',
+    'duration':
+        'Dauer',
+    'length':
+        'Länge',
+    'number of channels':
+        'Anzahl Kanäle',
     'play note %note for %n beats':
         'spiele Note %note f\u00fcr %n Schl\u00e4ge',
     'set instrument to %inst':
@@ -402,6 +423,22 @@ SnapTranslator.dict.de = {
         'setze Tempo auf %n Schl\u00e4ge/Min.',
     'tempo':
         'Tempo',
+    'change volume by %n':
+        'ändere Lautstärke um %n',
+    'set volume to %n %':
+        'setze Lautstärke auf %n %',
+    'change balance by %n':
+        'ändere Balance um %n',
+    'set balance to %n':
+        'setze Balance auf %n',
+    'balance':
+        'Balance',
+    'play frequency %n Hz':
+        'spiele Frequenz %n Hz',
+    'stop frequency':
+        'stoppe Frequenz',
+    'play %n Hz for %n secs':
+        'spiele %n Hz f\u00fcr %n Sek.',
 
     // "instruments", i.e. wave forms
     '(1) sine':
@@ -432,6 +469,8 @@ SnapTranslator.dict.de = {
         'setze Stift %hsva auf %n',
     'set background %hsva to %n':
         'setze Hintergrund %hsva auf %n',
+    'pen %pen':
+        'Stift %pen',
     'change pen size by %n':
         '\u00e4ndere Stiftdicke um %n',
     'set pen size to %n':
@@ -440,6 +479,8 @@ SnapTranslator.dict.de = {
         'stemple',
     'fill':
         'male aus',
+    'write %s size %n':
+        'schreibe %s Größe %n',
 
     // control:
     'when %greenflag clicked':
@@ -488,10 +529,14 @@ SnapTranslator.dict.de = {
         'wiederhole %n mal %loop',
     'repeat until %b %loop':
         'wiederhole bis %b %loop',
+    'for %upvar = %n to %n %cla':
+        'für %upvar = %n bis %n %cla',
     'if %b %c':
         'falls %b %c',
     'if %b %c else %c':
         'falls %b %c sonst %c',
+    'if %b then %s else %s':
+        'falls %b dann %s sonst %s',
     'report %s':
         'berichte %s',
     'stop %stopChoices':
@@ -604,7 +649,32 @@ SnapTranslator.dict.de = {
         'Sekunde',
     'time in milliseconds':
         'Zeit in Millisekunden',
-
+    'microphone %audio':
+        'Mikrofon %audio',
+    'volume':
+        'Lautstärke',
+    'note':
+        'Note',
+    'frequency':
+        'Frequenz',
+    'samples':
+        'Signale',
+    'sample rate':
+        'Abtastrate',
+    'spectrum':
+        'Frequenzspektrum',
+    'resolution':
+        'Auflösung',
+    'Microphone resolution...':
+        'Mikrofonauflösung...',
+    'Microphone':
+        'Mikrofon',
+    'low':
+        'niedrig',
+    'high':
+        'hoch',
+    'max':
+        'max',
     'filtered for %clr':
         'nach %clr gefiltert',
     'stack size':
@@ -685,6 +755,8 @@ SnapTranslator.dict.de = {
     // lists:
     'list %exp':
         'Liste %exp',
+    'numbers from %n to %n':
+        'Zahlen von %n bis %n',
     '%s in front of %l':
         '%s am Anfang von %l',
     'item %idx of %l':
@@ -697,6 +769,24 @@ SnapTranslator.dict.de = {
         '%l enth\u00e4lt %s',
     'thing':
         'etwas',
+    'is %l empty?':
+        'ist %l leer?',
+    'map %repRing over %l':
+        'wende %repRing an auf %l',
+    'keep items such that %predRing from %l':
+        'behalte Elemente, die %predRing aus %l',
+    'combine with %repRing items of %l':
+        'kombiniere mit %repRing die Elemente von %l',
+    '%blitz map %repRing over %l':
+        '%blitz wende %repRing an auf %l',
+    '%blitz keep items such that %predRing from %l':
+        '%blitz behalte Elemente, die %predRing aus %l',
+    '%blitz combine with %repRing items of %l':
+        '%blitz kombiniere mit %repRing die Elemente von %l',
+    'for each %upvar in %l %cla':
+        'für jedes %upvar von %l %cla',
+    'item':
+        'Element',
     'add %s to %l':
         'f\u00fcge %s zu %l hinzu',
     'delete %ida of %l':
@@ -790,10 +880,6 @@ SnapTranslator.dict.de = {
         'Bausteine',
     'For all Sprites':
         'Allen gemeinsam',
-    'Import tools':
-        'Tools laden',
-    'load the official library of\npowerful blocks':
-        'das offizielle Modul mit\nm\u00e4chtigen Bl\u00f6cken laden',
     'Libraries...':
         'Module...',
     'Select categories of additional blocks to add to this project.':
@@ -854,7 +940,6 @@ SnapTranslator.dict.de = {
         'Passwort zurücksetzen...',
     'Resend Verification Email...':
         'Bestätigungsmail nochmal senden...',
-    
 
     // settings menu
     'Language...':
@@ -1065,6 +1150,8 @@ SnapTranslator.dict.de = {
         'Drehpunkt des Kostüms\nanzeigen und verschieben',
     'rotate':
     	'Drehen',
+    'stick to':
+        'Befestigen an',
     'detach from':
         'Abtrennen von',
     'detach all parts':
@@ -1210,6 +1297,12 @@ SnapTranslator.dict.de = {
         'Beispiele',
     'Share':
         'Teilen',
+    'Unshare':
+        'Nicht mehr teilen',
+    'Publish':
+        'Veröffentlichen',
+    'Unpublish':
+        'Nicht mehr veröffentlichen',
     'Updating\nproject list...':
         'Projektliste laden',
     'Recover':
@@ -1279,8 +1372,10 @@ SnapTranslator.dict.de = {
         'fülle einen Bereich mit der gewählten Farbe\n(Shift: Sekundärfarbe)',
     'Pipette tool\n(pick a color from anywhere\nshift: secondary color)':
         'Pipette\nklicke irgendwo auf die gewünschte Farbe\n um sie aufzunehmen (Shift: Sekundärfarbe)',
-    'Primary color      Secondary color':
-        'Primärfarbe          Sekundärfarbe',
+    'Edge color\n(left click)':
+        'Randfarbe\n(Linksklick)',
+    'Fill color\n(right click)':
+        'Füllfarbe\n(Rechtsklick)',
    // 'Top':
    //     'oben',
    // 'Bottom':
@@ -1436,6 +1531,10 @@ SnapTranslator.dict.de = {
         'Maximalwert...',
     'import...':
         'Importieren...',
+    'raw data...':
+        'Rohdaten...',
+    'import without attempting to\nparse or format data':
+        'Daten unformatiert\nimportieren',
     'Slider minimum value':
         'Minimalwert des Reglers',
     'Slider maximum value':
@@ -1718,6 +1817,8 @@ SnapTranslator.dict.de = {
         'Mittelpunkt y',
     'name':
         'Name',
+    'costume':
+        'Kostüm',
     'stage':
         'B\u00fchne',
     'costumes':
@@ -1726,6 +1827,10 @@ SnapTranslator.dict.de = {
         'Klänge',
     'scripts':
         'Skripte',
+    'width':
+        'Breite',
+    'height':
+        'Höhe',
 
     // inheritance
     'inherited':

@@ -3,19 +3,44 @@
 ## in development
 
 * New Features:
+    * the "tools" library has been integrated as primitives 
     * export 1- /2- dimensional lists with atomic data as CSV
     * export n-dimensional lists with atomic data as JSON
     * import CSV, Text, or JSON via drag & drop
+    * option to import CSV etc. as "raw data", i.e. unparsed
     * parse JSON using the SPLIT reporter
     * new "aspect AT location" reporter in Sensing category for sniffing colors and sprites
     * new blocks for setting and changing the stage's background color
+    * new "microphone" reporter in Sensing for getting volume, note, pitch signals and frequencies
+    * new experimental live audio-scripting support
     * new "object" reporter in the Sensing category for getting a sprite by its name
     * blocks for changing and querying the "flat line ends" setting 
     * selectors for changing and querying "draggable" and "rotation style" settings
+    * new sound + music "volume" feature + blocks
+    * new sound + music stereo "panning" feature + blocks
+    * new sound attribute getter reporter
+    * new "play sound at sample rate" command
+    * accept lists and lists of lists as inputs to all sound primitives
+    * new "play frequency" commands in the Sounds category
+    * pixel access primitives for bitmap and vector (!) graphics
+    * new "stretch" primitive for costumes, also for flipping
+    * new "get graphic effect" reporter
+    * new "get pen attribute" reporter
+    * new "write" command in pen category (used to be "label" in tools)
+    * new "numbers", "is empty", "map","keep", "combine" and "for each" primitives in list category
+    * new JIT-compiler "blitz-HOF" primitives for "map", "keep" & "combine" via "relabel"
+    * new "for" loop and "if then else" reporter primitives in the Control category
+    * added "neg", "lg" (log2) and "2^" selectors to monadic function reporter in Operators
+    * added "^" reporter (power of) in the Operators category
+    * added "width" and "height" to the MY blocks dropdown
+    * added "width" and "height" as attribute selectors of the OF primitive
+    * added "costume" selector to the MY attributes dropdown
     * special context-aware drop-downs for custom blocks
+    * new "stick to" submenu in the sprite context menu where applicable
     * multi-line and monospaced "code" input slots for custom blocks
     * new "string" library, thanks, Brian
-    * added "neg" selector to monadic function reporter in "Operators" category
+    * new "text costumes" library for generating costumes from letters or words of text
+    * graphic effects and sound attributes can now be animated with easing functions
     * enhanced support for embedding Snap in other website, thanks, Bernat!
     * export sounds
 * Notable Changes:
@@ -25,19 +50,335 @@
     * "loop arrow" symbol for primitive loops, also available for custom blocks
     * optimized in-project storage of atomic-data lists (more efficient, less space) 
     * remove all clones when the Green Flag is clicked
+    * adjust bottom of STOP block to reflect the menu selection (show / hide bottom notch) 
+    * enable dropping commands into all rings
+    * colors in the vector editor are now named "Edge color" and "Fill color", thanks, Brian!
+    * deprecated storing projects in the browser's localStorage
+    * deprecated some (useless) graphic effects
+    * additional "publish / unpublish" buttons in the project dialog
+    * buttons for saving & loading projects to disk in the project dialog
+    * more language options for the Text2Speech library, thanks Joan!
 * Notable Fixes:
+    * eliminated "clicks" when playing music notes
     * "relabel" blocks with translated drop-down choices
     * transforming arrayed to linked lists without loosing the last element
     * using "inherit" no longer un-hides the palette in presentation mode
+    * relabelling custom blocks with empty numerical input slots no longer fills in zeroes
+    * the language menu now has a "globe" icon (so it can be found in any language)
+    * accept a number as input for a sound - interpret as index
+    * fixed many costume sizes, thanks, Brian!
 * Translation Updates:
     * Chinese, thanks, Simon!
     * Turkish, thanks, Turgut!
     * Indonesian, thanks, Emanuella!
     * Greek, thanks, Alexandros!
+    * Catalan, thanks, Joan!
+    * Spanish
     * German
+    * French
+
+### 2019-05-02
+* Blocks: reordered MY block dropdown by data type
+* Blocks, Threads: added "width" and "height" to the MY block's dropdown
+* Blocks, Threads: added "width" and "height" to the OF block's dropdown for sprites
+* Blocks, Objects: added hidden "blitz-HOF primitives" for MAP, KEEP and COMBINE 
+* updated German, Catalan, Spanish and French translations for "blitz-HOF" primitives
+* duplicated help-screens for "map" & friends for their atomic "blitz" variants
+* Objects: expose "import raw data" option in variable watcher context menu
+* German translation update for "raw data" importing feature
+* Threads: added JIT-Compiler support for new IF/ELSE reporter primitive
+
+### 2019-04-30
+* Blocks, Threads: added "id" to image attributes dropdown
+* Blocks, Threads: removed "id" from image attributes
+* Blocks, Threads: added "costume" selector to MY dropdown
+* German translation update
+* Objects: adjusted costume stretch minimum to 1 pixel
+
+### 2019-04-29
+* optimized animation library
+* Threads: stop audio frequency instances when "stop all" is executed
+
+### 2019-04-28
+* more helpscreens and bignum library update, thanks, Brian!
+* more language options for the Text2Speech library, thanks, Joan!
+* Objects, translations: changed "hz" typo to "Hz", thanks, Brian, for catching this!
+
+### 2019-04-27
+* Lists, Threads, Objects: new "is empty" predicate primitive in List category
+* Threads, Objects: new "numbers" constructor primitive in List category
+* Threads: renamed "aggregation" property to "accumulator"
+* GUI: removed "tools" library, yay!
+* updated German, Catalan, Spanish and French translations for former tools
+* renamed help screen for "is _ empty?"
+
+### 2019-04-26
+* updated Catalan translation (for new HOF prims)
+* updated Spanish translation (for new HOF prims)
+* updated French translation (for new HOF prims)
+* corrected French translation for "warp" to be "warp" instead of "englobe"
+* moved "for each" down in the lists pallette towards the imperative blocks
+* updated "tools" library (for new HOF prims)
+* removed "catch" etc. from "tools" library (has been moved to "iteration" lib)
+* updated "cases" library (for new HOF prims)
+* updated "bignums" library (for new HOF prims)
+* updated "crayons" library (for new HOF prims)
+* updated "animation" library (for new HOF prims)
+* updated "audio comp" library (for new HOF prims)
+* updated "parallelism" library (for new HOF prims)
+* renamed help screens for the new HOF prims
+* Theads: added support for single implicit parameter to FOR EACH prim
+
+### 2019-04-25
+* updated German translation (for new HOF prims)
+* Costume size fixes, yay! Thank you, Brian!!
+
+### 2019-04-24
+* Threads, Objects: new "combine" primitive in list category
+* Threads: added type-assertions for the new HOF prims
+* Threads, Objects: new "for" loop primitive in Control category
+* Threads, Objects: new "if then else" reporter primitive in Control category
+
+### 2019-04-23
+* Threads: fixed JS stack overflow issue for MAP primitive
+* Threads: new "map" and "for each" primitives in list category
+* Threads: new "keep" primitive in list category
+
+### 2019-04-22
+* Threads: fixed variable binding for "arguments", turned dictionary key into a Symbol
+
+### 2019-04-15
+* Catalan translation update
+
+### 2019-04-12
+* Objects: enabled text-variables as inputs for graphic effects / pen attributes
+* updated amination library with graphic effects and audio attributes
+
+### 2019-04-11
+* Blocks, Threads: renamed monadic selectors: "neg" to "-" and "log2" to "lg", added "2^"
+* Objects: moved costume-pixels primitives down in the palette towards the graphic effects
+* German translation update
+* re- renamed minus selector back to "neg"
+* updated tools library (removed "label", because it's now a primitive)
+* updated text-costumes library (removed "label", because it's now a primitive)
+* updated pixels-library (removed blocks that are now primitives)
+* updated audio-comp library (removed blocks that are now primitives)
+
+### 2019-04-10
+* Objects: took out MAP and FOREACH primitives (available in dev mode)
+* Objects: fixed #2371 (playing sounds in the stage)
+* GUI: fixed #2367 (changing project source after exporting to disk)
+* GUI: fixed #2373 (limit zoom blocks slider to 5x)
+
+### 2019-04-09
+* Blocks, Objects, Threads: new "getImageAttribute" reporter primitive
+* Objects, Threads: let "getImageAttribute" deal with null costumes
+* Objects, Threads: new "stretch" primitive for costumes, also for flipping
+* Threads: new feature: new costume from list of pixels
+* Objects, Threads: added "current" to costume input slot dropdown
+* Blocks: deprecated graphic effects: "duplicate", "comic" and "confetti" 
+* Objects: added reporter for graphic effects
+* Objects, Blocks: added pen attribute reporter
+* Objects: added "write" command to Pen category (same as "label" from tools
+* Objects: added "map" and "for each" primitives to List category
+* Objects: made HOF primitives hidable
+
+### 2019-04-08
+* Blocks, Objects, Threads: new "getSoundAttribute" reporter primitive
+* Blocks, Objects, Threads: new "play sound at sample rate" command primitive
+* Objects: added relabelling information for the new "play sound at sample rate" block
+* Objects, Threads: accept a number as input for a sound - interpret as index
+* Objects, Threads: accept lists and lists of lists as inputs to all sound playing primitives
+* Threads: accept lists and lists of lists as inputs to the "get sound attribute" primitive
+
+### 2019-04-05
+* Objects: eliminated "clicks" when playing music notes
+* Objects: eliminated "clicks" when playing a frequency
+* Widgets, Objects: Adjusted PianoKeyboard for the new audio engine
+* Objects: tweaked oscillator fade-out
+* Blocks, Threads: added "sample rate" selector to microphone drow-down
+* updated German translation for "sample rate"
+* Objects: stop microphone output when the user presses the stop button
+
+### 2019-04-04
+* Objects, Threads: new "play frequency" commands in the Sounds category
+* Objects, Store: renamed "pan left/right" to "balance"
+* updated German translation
+* moved "stage width" and "stage height" into attribute menu of the OF block for the stage
+* added 'volume' and 'balance' selectors to the OF block
+* Objects, Threads, Blocks: added inheritance support for "volume"
+* Objects, Threads, Blocks: added inheritance support for "balance"
+
+### 2019-04-03
+* Objects, Threads: Safari compatibility tweaks (only use StereoPanner if available)
+* Objects, Store: new feature: volume blocks
+* Objects: added relabelling information for the new volume blocks
+* Objects, Store: new feature: audio stereo-panning blocks
+* Objects: added relabelling information for the new stereo-panning blocks
+* German translation update for volume and panning blocks
+* updated AudioComp library for the new volume and stereo-panning features
+
+### 2019-04-02
+* Objects, Threads: lazily initialize volume property
+* Objects: use AudioContext to play recorded sounds
+* Objects: new audio scheme support for the stage
+* Objects: added basic stereo-panning support for sounds (under construction)
+* Objects, Threads: added basic stereo-panning support for notes
+* Objects: map volume to a logarithmic gain scale
+* Blocks, Threads: added "log2" function selector to monadic reporter, tweaked "log"
+
+### 2019-04-01
+* Objects: let the Microphone share the Note prototype's AudioContext
+* Objects: took out gain node from Note oscillator (will be used for "volume" setting)
+* Objects: refactored audio context sharing and lazy initialization
+* Objects, Threads: added volume support for notes (under construction)
+
+### 2019-03-31
+* Blocks, Threads: added "stage width" and "stage height" as gettable attributes to MY
+* updated German translation
+* updated AudioComp library (removed stage width/height blocks, added translation)
+
+### 2019-03-30
+* Objects: support multi-channel live-audio scripting
+* Threads, Objects: added JIT-compilation to live-audio scripting
+
+### 2019-03-28
+* Blocks, Threaeds, Objects: new experimental live audio scripting support
+
+### 2019-03-26
+* updated French translation
+* updated animation library with partial French translation
+
+### 2019-03-25
+* GUI: fixed unintentional pen trails when manually cloning or duplicating a sprite whose pen is down
+
+### 2019-03-18
+* Threads: replaced 'colorBehindSprite' with 'colorAtSprite'
+* Blocks: renamed some items of the microphone dropdown
+* updated German translation
+
+### 2019-03-17
+* Threads: renamed 'colorAtSprite' to 'colorBelowSprite' (first step to refactoring it altogether)
+
+### 2019-03-15
+* Objects: improved microphone pitch detection
+
+### 2019-03-14
+* atomic HOFs lib: consolidate names with tools lib, thanks, Brian
+* atomic HOFs lib: added translations from tools lib
+
+### 2019-03-13
+* Objects: Simplified and optimized pitch detection, made it work on Safari
+* Objects: made "play frequency" command experimental / only revealed in dev
+* added "play hz" and "stop hz" blocks to AudioComp libary
+* Objects: Optimized microphone volume detection
+
+### 2019-03-12
+* Threads: changed microphone volume (back) to a scale of 0-100
+* Threads, Objects: added "play frequency" primitive to "Sound" category
+* updated German translation for "play frequency" primitive
+* Objects, Threads: added "^" reporter (power of) in the Operators category
+* Objects: updated relabel-dictionary
+* updated Animation und AudioComp libraries with new powerOf primitive
+* disabled pitch detection for Safari, so at least the other microphone features work
+
+### 2019-03-11
+* added note / hz conversion blocks to audioComp library
+* ported multiline library to new (custom input slot) format
+* new "text costumes" library for generating costumes from letters or words of text
+* took out "b block" costume from catalog
+* added microphone "resolution" concept governing "bins" (buffer / bin sizes)
+* added microphone "resolution" settings to GUI
+* updated German translation for microphone settings
+* removed microphone resolution setters from audioComp library
+
+### 2019-03-10
+* Objects, Blocks, Threads: added microphone note and pitch detection
+* Tweaked note detection to only change when the audio signal is strong enough
+* updated German translation for pitch-detection
+* tweaked pitch detection to smoothen low audio signals
+
+### 2019-03-07
+* AudioComp lib: added block to set the microphone's buffer and fft sizes
+* German translation update (microphone features)
+* simplified "globe" symbol
+
+### 2019-03-06
+* AudioComp lib: turn off mic after 5 secs of idling
+* AudioComp lib: support Safari
+* removed "loudness / microphone" block from AudioComp lib (turned into primitive)
+* new "microphone" reporter in Sensing for getting volume, signals and frequencies
+* Objects: keep microphone always on when running Snap! locally
+* GUI: let users turn off microphone manually in the settings menu (in the offline version) 
+
+### 2019-03-05
+* GUI: added "globe" icon to language menu item
+* AudioComp lib: added @mjguzdial style live signal and fft support
+
+### 2019-03-04
+* GUI: deprecated storing projects in localStorage
+* GUI: reenabled publish / unpublish buttons in the project dialog
+* GUI: spread project dialog action buttons over 2 rows
+* GUI: changed project dialog's initial & miminum extent
+* Updated German translation
+
+### 2019-02-26
+* Symbols: new "globe" symbol
+* GUI: replaced "storage" icon in project dialog with "globe" symbol
+
+### 2019-02-26
+* GUI: made "inheritance support" setting hidden
+* Objects: disabled calls to world.worldCanvas.focus()
+
+### 2019-02-25
+* German translation for animation library
+* GUI, snap.html: don't focus embedded worlds
+
+### 2019-02-24
+* Catalan translation update, thanks, Joan!
+
+### 2019-02-23
+* new help screens for some blocks, thanks, Brian!
+
+### 2019-02-22
+* Paint, Sketch: fixed pipette bug for fill color introduced 
+* Tweaked German translation
+* Tweaked sharing scripts with global custom blocks among projects, thanks, Bernat! 
+
+### 2019-02-21
+* Blocks: fixed deleting a single command inside a stack
+
+### 2019-02-20
+* Tweaked German translation
+* Vector editor color name changes, thanks, Brian!
+
+### 2019-02-19
+* Threads: fixed #2332. I hate it. It's fixes like this that bog Snap! down.
+* Udated German translation
+
+### 2019-02-18
+* Objects: enable sprite nesting via the context menu
+
+### 2019-02-15
+* BYOB: tweaked yesterday's fix...
+* Blocks: fixed a glitch in the custom block help mechanism (show only the prototype)
+
+### 2019-02-14
+* BYOB: keep empty numerical input slots in custom blocks empty when relabelling
+
+### 2019-02-07
+* Store: tweaked loading mechanism to enable command blocks inside reporter rings
+* Objects: tweaked spec for settings getter
+* Blocks: improved dropping command blocks into reporter rings
+* Morphic: simplified and optimized Node>>parentThatIsA / parentThatIsAnyOf
+* Blocks, Lists, Tables: refactored for optimized parent-by-type detection
+* Blocks: adjusted keyboard typing for command blocks inside reporter rings
+* GUI, Blocks: enable dropping command blocks into all rings by default. Yeah!
 
 ### 2019-02-06
 * Blocks, BYOB: refactored custom block input options and drop-down menus
+* Blocks: adjust bottom of STOP block to reflect the menu selection (show / hide bottom notch)
+* Blocks: enable dropping commands into all rings, under constructions 
 
 ### 2019-02-05
 * BYOB: radio button symbols for special slot / drop-down menu options
